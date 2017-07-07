@@ -39,7 +39,7 @@ opt = {
    lr = 0.0002,            -- initial learning rate for adam
    beta1 = 0.5,            -- momentum term of adam
    ntrain = math.huge,     -- #  of examples per epoch. math.huge for full dataset
-   display = 1,            -- display samples while training. 0 = false
+   display = 0,            -- display samples while training. 0 = false
    display_id = 10,        -- display window id.
    gpu = 1,                -- gpu = 0 is CPU mode. gpu=X is GPU mode on GPU X
    name = 'experiment1',
@@ -86,7 +86,7 @@ local SpatialConvolution = nn.SpatialConvolution
 local SpatialFullConvolution = nn.SpatialFullConvolution
 require 'cudnn'
 --if io.open('pretrained_model.t7')~=nil then
-if true then
+if false then
 --  netG = torch.load('models/zero.t7')
   netG = torch.load('models/bird_1.t7')
 else
