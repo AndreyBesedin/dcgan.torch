@@ -36,7 +36,7 @@ opt = {
    ndf = 64,               -- #  of discrim filters in first conv layer
    nThreads = 4,           -- #  of data loading threads to use
    niter = 500,             -- #  of iter at starting learning rate
-   lr = 0.002,            -- initial learning rate for adam
+   lr = 0.0002,            -- initial learning rate for adam
    beta1 = 0.5,            -- momentum term of adam
    ntrain = math.huge,     -- #  of examples per epoch. math.huge for full dataset
    display = 1,            -- display samples while training. 0 = false
@@ -88,7 +88,7 @@ require 'cudnn'
 --if io.open('pretrained_model.t7')~=nil then
 if true then
 --  netG = torch.load('models/zero.t7')
-  netG = torch.load('models/automobile_1.t7')
+  netG = torch.load('models/bird_1.t7')
 else
   netG = nn.Sequential()
   -- input is Z, going into a convolution
