@@ -27,11 +27,11 @@ os.execute('mkdir -p cache')
 local trainCache = paths.concat(cache, cache_prefix .. '_trainCache.t7')
 
 --------------------------------------------------------------------------------------------
-local loadSize   = {3, opt.loadSize}
-local sampleSize = {3, opt.fineSize}
+local loadSize   = {opt.nb_channels, opt.loadSize}
+local sampleSize = {opt.nb_channels, opt.fineSize}
 
 local function loadImage(path)
-   local input = image.load(path, 3, 'float')
+   local input = image.load(path, opt.nb_channels, 'float'):reshape(opt.nb_channels, 32, 32)
    -- find the smaller dimension, and resize it to loadSize[2] (while keeping aspect ratio)
    local iW = input:size(3)
    local iH = input:size(2)
@@ -54,17 +54,18 @@ local trainHook = function(self, path)
    local input = loadImage(path)
    local iW = input:size(3)
    local iH = input:size(2)
-
+   local out = input
    -- do random crop
    local oW = sampleSize[2];
    local oH = sampleSize[2]
-   local h1 = math.ceil(torch.uniform(1e-2, iH-oH))
-   local w1 = math.ceil(torch.uniform(1e-2, iW-oW))
-   local out = image.crop(input, w1, h1, w1 + oW, h1 + oH)
+   local h1 = math.ceil(torch.uniform((iH-oH)/5, 4*(iH-oH)/5))
+   local w1 = math.ceil(torch.uniform((iW-oW)/5, 4*(iW-oW)/5))
+   local out = image.rotate(input, torch.uniform(-opt.data_rotation, opt.data_rotation))
+   out = image.crop(out, w1, h1, w1 + oW, h1 + oH)
    assert(out:size(2) == oW)
    assert(out:size(3) == oH)
    -- do hflip with probability 0.5
-   if torch.uniform() > 0.5 then out = image.hflip(out); end
+   -- if torch.uniform() > 0.5 then out = image.hflip(out); end
    out:mul(2):add(-1) -- make it [0, 1] -> [-1, 1]
    return out
 end
@@ -75,14 +76,14 @@ if paths.filep(trainCache) then
    print('Loading train metadata from cache')
    trainLoader = torch.load(trainCache)
    trainLoader.sampleHookTrain = trainHook
-   trainLoader.loadSize = {3, opt.loadSize, opt.loadSize}
-   trainLoader.sampleSize = {3, sampleSize[2], sampleSize[2]}
+   trainLoader.loadSize = {opt.nb_channels, opt.loadSize, opt.loadSize}
+   trainLoader.sampleSize = {opt.nb_channels, sampleSize[2], sampleSize[2]}
 else
    print('Creating train metadata')
    trainLoader = dataLoader{
       paths = {opt.data},
-      loadSize = {3, loadSize[2], loadSize[2]},
-      sampleSize = {3, sampleSize[2], sampleSize[2]},
+      loadSize = {opt.nb_channels, loadSize[2], loadSize[2]},
+      sampleSize = {opt.nb_channels, sampleSize[2], sampleSize[2]},
       split = 100,
       verbose = true
    }

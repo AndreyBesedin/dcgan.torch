@@ -2,41 +2,17 @@ require 'torch'
 require 'nn'
 require 'optim'
 
--- MNIST setup
--- opt = {
---    dataset = 'lsun',       -- imagenet / lsun / folder
---    batchSize = 64,
---    loadSize = 65,
---    fineSize = 64,
---    nz = 100,               -- #  of dim for Z
---    ngf = 64,               -- #  of gen filters in first conv layer
---    ndf = 64,               -- #  of discrim filters in first conv layer
---    nThreads = 4,           -- #  of data loading threads to use
---    niter = 100,             -- #  of iter at starting learning rate
---    lr = 0.0005,            -- initial learning rate for adam
---    beta1 = 0.5,            -- momentum term of adam
---    ntrain = math.huge,     -- #  of examples per epoch. math.huge for full dataset
---    display = 1,            -- display samples while training. 0 = false
---    display_id = 10,        -- display window id.
---    gpu = 1,                -- gpu = 0 is CPU mode. gpu=X is GPU mode on GPU X
---    name = 'experiment1',
---    noise = 'normal',       -- uniform / normal
---    nb_channels = 1,
---    data_rotation = 0,
---    learningRateDecay = 5e-5
--- }
--- CIFAR10 setup
 opt = {
    dataset = 'lsun',       -- imagenet / lsun / folder
    batchSize = 64,
-   loadSize = 72,
+   loadSize = 65,
    fineSize = 64,
    nz = 100,               -- #  of dim for Z
    ngf = 64,               -- #  of gen filters in first conv layer
    ndf = 64,               -- #  of discrim filters in first conv layer
    nThreads = 4,           -- #  of data loading threads to use
-   niter = 500,             -- #  of iter at starting learning rate
-   lr = 0.002,            -- initial learning rate for adam
+   niter = 100,             -- #  of iter at starting learning rate
+   lr = 0.0002,            -- initial learning rate for adam
    beta1 = 0.5,            -- momentum term of adam
    ntrain = math.huge,     -- #  of examples per epoch. math.huge for full dataset
    display = 1,            -- display samples while training. 0 = false
@@ -44,10 +20,11 @@ opt = {
    gpu = 1,                -- gpu = 0 is CPU mode. gpu=X is GPU mode on GPU X
    name = 'experiment1',
    noise = 'normal',       -- uniform / normal
-   nb_channels = 3,
-   data_rotation = 0.02,
-   --learningRateDecay = 5e-7
+   nb_channels = 1,
+   data_rotation = 0.1,
+   learningRateDecay = 1e-7
 }
+
 -- one-line argument parser. parses enviroment variables to override the defaults
 for k,v in pairs(opt) do opt[k] = tonumber(os.getenv(k)) or os.getenv(k) or opt[k] end
 print(opt)
@@ -58,6 +35,7 @@ print("Random Seed: " .. opt.manualSeed)
 torch.manualSeed(opt.manualSeed)
 torch.setnumthreads(1)
 torch.setdefaulttensortype('torch.FloatTensor')
+
 -- create data loader
 local DataLoader = paths.dofile('data/data.lua')
 local data = DataLoader.new(opt.nThreads, opt.dataset, opt)
@@ -84,33 +62,26 @@ local fake_label = 0
 local SpatialBatchNormalization = nn.SpatialBatchNormalization
 local SpatialConvolution = nn.SpatialConvolution
 local SpatialFullConvolution = nn.SpatialFullConvolution
-require 'cudnn'
---if io.open('pretrained_model.t7')~=nil then
-if true then
---  netG = torch.load('models/zero.t7')
-  netG = torch.load('models/automobile_1.t7')
-else
-  netG = nn.Sequential()
-  -- input is Z, going into a convolution
-  netG:add(SpatialFullConvolution(nz, ngf * 8, 4, 4))
-  netG:add(SpatialBatchNormalization(ngf * 8)):add(nn.ReLU(true))
-  -- state size: (ngf*8) x 4 x 4
-  netG:add(SpatialFullConvolution(ngf * 8, ngf * 4, 4, 4, 2, 2, 1, 1))
-  netG:add(SpatialBatchNormalization(ngf * 4)):add(nn.ReLU(true))
+
+local netG = nn.Sequential()
+-- input is Z, going into a convolution
+netG:add(SpatialFullConvolution(nz, ngf * 8, 4, 4))
+netG:add(SpatialBatchNormalization(ngf * 8)):add(nn.ReLU(true))
+-- state size: (ngf*8) x 4 x 4
+netG:add(SpatialFullConvolution(ngf * 8, ngf * 4, 4, 4, 2, 2, 1, 1))
+netG:add(SpatialBatchNormalization(ngf * 4)):add(nn.ReLU(true))
 -- state size: (ngf*4) x 8 x 8
-  netG:add(SpatialFullConvolution(ngf * 4, ngf * 2, 4, 4, 2, 2, 1, 1))
-  netG:add(SpatialBatchNormalization(ngf * 2)):add(nn.ReLU(true))
+netG:add(SpatialFullConvolution(ngf * 4, ngf * 2, 4, 4, 2, 2, 1, 1))
+netG:add(SpatialBatchNormalization(ngf * 2)):add(nn.ReLU(true))
 -- state size: (ngf*4) x 16 x 16
-  netG:add(SpatialFullConvolution(ngf * 2, ngf, 4, 4, 2, 2, 1, 1))
-  netG:add(SpatialBatchNormalization(ngf)):add(nn.ReLU(true))
+netG:add(SpatialFullConvolution(ngf * 2, ngf, 4, 4, 2, 2, 1, 1))
+netG:add(SpatialBatchNormalization(ngf)):add(nn.ReLU(true))
 -- state size: (ngf) x 32 x 32
-  netG:add(SpatialFullConvolution(ngf, nc, 4, 4, 2, 2, 1, 1))
-  netG:add(nn.Tanh())
+netG:add(SpatialFullConvolution(ngf, nc, 4, 4, 2, 2, 1, 1))
+netG:add(nn.Tanh())
 -- state size: (nc) x 64 x 64
 
-  netG:apply(weights_init)
-end
-
+netG:apply(weights_init)
 
 local netD = nn.Sequential()
 
@@ -141,21 +112,16 @@ netD:apply(weights_init)
 print('netD: '); print(netD)
 print('netG: '); print(netG)
 local criterion = nn.BCECriterion()
---local criterion = nn.AbsCriterion()
 ---------------------------------------------------------------------------
-optimConfigG = {
+optimStateG = {
    learningRate = opt.lr,
    beta1 = opt.beta1,
 --   learningRateDecay = opt.learningRateDecay
 }
-optimConfigD = {
+optimStateD = {
    learningRate = opt.lr,
    beta1 = opt.beta1,
---   learningRateDecay = opt.learningRateDecay
 }
-optimStateG = optimConfigG
-optimStateD = optimConfigD
-
 ----------------------------------------------------------------------------
 local input = torch.Tensor(opt.batchSize, opt.nb_channels, opt.fineSize, opt.fineSize)
 local noise = torch.Tensor(opt.batchSize, nz, 1, 1)
@@ -246,23 +212,20 @@ local fGx = function(x)
 end
 
 -- train
-
-
-
 for epoch = 1, opt.niter do
    epoch_tm:reset()
-   local counter = 0  
+   local counter = 0
    for i = 1, math.min(data:size(), opt.ntrain), opt.batchSize do
       tm:reset()
       -- (1) Update D network: maximize log(D(x)) + log(1 - D(G(z)))
-      optim.adam(fDx, parametersD, optimConfigD, optimStateD)
+      optim.adam(fDx, parametersD, optimStateD)
 
       -- (2) Update G network: maximize log(D(G(z)))
-      optim.adam(fGx, parametersG, optimConfigG, optimStateG)
+      optim.adam(fGx, parametersG, optimStateG)
 
       -- display
       counter = counter + 1
-      if counter % 1 == 0 and opt.display then
+      if counter % 10 == 0 and opt.display then
           local fake = netG:forward(noise_vis)
           local real = data:getBatch()
           disp.image(fake, {win=opt.display_id, title=opt.name})
