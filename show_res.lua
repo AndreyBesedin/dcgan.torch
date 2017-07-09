@@ -4,7 +4,7 @@ require 'cudnn'
 opt = {}
 opt.dataset = 'other'
 opt.gen_per_class = 100
-opt.models_folder = '../../streams/models/pretrained_generative_models/mnist_by_train_size/s07/'
+opt.models_folder = '../streams/models/pretrained_generative_models/mnist_by_train_size/s07/'
 data = generate_from_models_set(opt)
 show_multiple_images(data, 10, 10)
 

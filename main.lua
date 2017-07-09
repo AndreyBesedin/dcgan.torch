@@ -29,23 +29,24 @@ require 'optim'
 opt = {
    dataset = 'lsun',       -- imagenet / lsun / folder
    batchSize = 64,
-   loadSize = 72,
+   loadSize = 65,
    fineSize = 64,
    nz = 100,               -- #  of dim for Z
    ngf = 64,               -- #  of gen filters in first conv layer
    ndf = 64,               -- #  of discrim filters in first conv layer
    nThreads = 4,           -- #  of data loading threads to use
    niter = 500,             -- #  of iter at starting learning rate
-   lr = 0.0002,            -- initial learning rate for adam
+   lrG = 0.0002,
+   lrD = 0.00005,            -- initial learning rate for adam
    beta1 = 0.5,            -- momentum term of adam
    ntrain = math.huge,     -- #  of examples per epoch. math.huge for full dataset
-   display = 0,            -- display samples while training. 0 = false
+   display = 1,            -- display samples while training. 0 = false
    display_id = 10,        -- display window id.
    gpu = 1,                -- gpu = 0 is CPU mode. gpu=X is GPU mode on GPU X
    name = 'experiment1',
    noise = 'normal',       -- uniform / normal
    nb_channels = 3,
-   data_rotation = 0.02,
+   data_rotation = 0,
    --learningRateDecay = 5e-7
 }
 -- one-line argument parser. parses enviroment variables to override the defaults
@@ -86,7 +87,7 @@ local SpatialConvolution = nn.SpatialConvolution
 local SpatialFullConvolution = nn.SpatialFullConvolution
 require 'cudnn'
 --if io.open('pretrained_model.t7')~=nil then
-if false then
+if true then
 --  netG = torch.load('models/zero.t7')
   netG = torch.load('models/bird_1.t7')
 else
@@ -144,12 +145,12 @@ local criterion = nn.BCECriterion()
 --local criterion = nn.AbsCriterion()
 ---------------------------------------------------------------------------
 optimConfigG = {
-   learningRate = opt.lr,
+   learningRate = opt.lrG,
    beta1 = opt.beta1,
 --   learningRateDecay = opt.learningRateDecay
 }
 optimConfigD = {
-   learningRate = opt.lr,
+   learningRate = opt.lrD,
    beta1 = opt.beta1,
 --   learningRateDecay = opt.learningRateDecay
 }
